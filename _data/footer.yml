@@ -7,7 +7,6 @@ columns:
     src: 'assets/img/main_logo.svg'
     alt: Jekyll Bootstrap theme logo
   - type: links
-    title: Title
     width: 3
     children: 
       - url_text: Home
