@@ -1,5 +1,6 @@
 /*-----General styling-----*/
-$font-family-theme: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !default;
+$font-family-theme: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans",
+    "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !default;
 $h2-color: $primary;
 
 /*-----Buttons hover style-----*/
@@ -67,4 +68,3 @@ $footer-color: $dark;
 $footer-link-color: $dark;
 $footer-link-color-hover: $primary;
 $footer-copyright-bg: $gray-200;
-
