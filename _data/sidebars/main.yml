@@ -1,5 +1,7 @@
 subitems:
   - title: Home
-    url: /index
+    url: /
+  - title: Example page
+    url: /example_page
 
   
