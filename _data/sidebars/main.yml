@@ -1,6 +1,6 @@
 subitems:
   - title: Home
-    url: /
+    url: /index
   - title: Example page
     url: /example_page
 
