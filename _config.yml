@@ -11,6 +11,7 @@ remote_theme: ELIXIR-Belgium/elixir-toolkit-theme@1.17.0
 
 exclude:
   - README.md
+  - vendor
 
 defaults:
   -
