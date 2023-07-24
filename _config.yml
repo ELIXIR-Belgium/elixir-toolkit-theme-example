@@ -7,13 +7,15 @@ topnav_title: Website title
 description: "Example of ELIXIR toolkit theme as a remote jekyll theme"
 # Metadata description of the website
 
-remote_theme: ELIXIR-Belgium/elixir-toolkit-theme@1.23.0
+remote_theme: ELIXIR-Belgium/elixir-toolkit-theme@2.0.0
 
 exclude:
   - README.md
   - vendor
+  - Gemfile
 
 defaults:
+# Define here metadata attributes of pages for all of them at once of on specific directories. More information: https://jekyllrb.com/docs/configuration/front-matter-defaults/
   -
     scope:
       path: ""
@@ -23,8 +25,32 @@ defaults:
       layout: "page"
       sidebar: main
 
+theme_variables: 
+  # git_host: GitHub
+  # back_to_top: true
+  # privacy_statement_url: /privacy
+  # github_buttons: 
+  #   position: top
+  #   edit_me: true
+  #   open_issue: true
+  #   history: true
+  # toc:
+  #   min_headers: 2
+  #   headers: 'h2'
+  # topnav:
+    # theme: light
+    # brand_logo: assets/img/main_logo.svg
+    # github: true
+    # twitter: false
+  # theme_color: 0d6efd
+  # fonts:
+  #   - url towards a font
+
 plugins:
-  - jemoji
+  - elixir-toolkit-theme-plugins
+  - jekyll-redirect-from
+  - jekyll-seo-tag
   - jekyll-sitemap
   - jekyll-github-metadata
+  - jemoji
   - webrick
