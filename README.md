@@ -41,6 +41,6 @@ Any change to the master/main branch will automatically trigger the re-deploymen
 
 And many more documentation pages can be found on the original [ELIXIR Toolkit Theme website](https://elixir-belgium.github.io/elixir-toolkit-theme).
 
-### 5. Add a license file to your GitHub repository. 
+### 5. Add a LICENSE file to your GitHub repository. 
 
 Add a license to your repository using the [GitHub instructions](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/adding-a-license-to-a-repository).
