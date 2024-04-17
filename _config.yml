@@ -15,7 +15,7 @@ exclude:
   - Gemfile
 
 defaults:
-# Define here metadata attributes of pages for all of them at once of on specific directories. More information: https://jekyllrb.com/docs/configuration/front-matter-defaults/
+# Define here page metadata attributes for all pages at once or on specific directories. More information: https://jekyllrb.com/docs/configuration/front-matter-defaults/
   -
     scope:
       path: ""
@@ -34,9 +34,16 @@ theme_variables:
   #   edit_me: true
   #   open_issue: true
   #   history: true
+  # headings:
+  #   related-pages: Related pages
+  #   more-information-tiles: More information
+  #   resource-table-all: Tools and resources on this page
+  #   resource-table-all-collapse: false
+  #   affiliation-tiles-page: Affiliations
+  #   contributor-minitiles-page: Contributors
   # toc:
-  #   min_headers: 2
-  #   headers: 'h2'
+  #   min_headings: 2
+  #   headings: 'h2'
   # topnav:
     # theme: light
     # brand_logo: assets/img/main_logo.svg
