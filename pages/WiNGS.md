@@ -29,6 +29,11 @@ For these reasons, WiNGS was implemented to become a portal to aggregated genomi
 
 TODO: add wings setup img : how ? 
 
+Data is structured in WiNGS as follows:
+- ** Individual **: these are cinical cases, patients.
+- ** Sample **: these are the experimental samples associated to individuals. (eg : WGS experiment, or SV experiment)
+- ** Dataset **: These are the analysis files related to a sample. eg : GATK based SNV analysis on hg38 for WGS data. 
+
 WiNGS is accessible as REST api, which is documented through [swagger](https://wings.esat.kuleuven.be/rest-api/api-docs/).  To perform an analysis, the following prerequisites are needed, which are performed through a web-based UI: 
 
 - ** A user account ** : to shield data, anonymous access is not allowed, register [here](https://wings.esat.kuleuven.be/Account/Register)
@@ -85,7 +90,7 @@ def get_api_result(url, endpoint, token, method='GET', **kwargs):
    try:
       response = requests.request(method, f"{url}/{endpoint}", headers=headers, json=arguments, params=arguments, verify=True)
       response.raise_for_status()
-      return response.json()
+      return response.json()['message']
    except requests.exceptions.RequestException as e:
       print('Failed to get api response')
       print(repr(e))
@@ -100,46 +105,41 @@ if __name__ == '__main__':
    endpoint='piid'
    r = get_api_result(url,endpoint,token)
    print(f"The resulting data is : \n {pprint.pformat(r)}")
-
-
+   # select first (if multiple)
+   piid = r[0]['PIID']
 ```
 
 When executed, the above script will ask for your token and will print the api response to screen. Note the piid as you will need the value later on. 
 
+### Listing Samples
+
+Samples access is restricted by account.  This means that as a registered user, you can only see samples assigned to you. This type of work is not federated in a strict sense, as WiNGS automatically directs queries to the correct, individual data node.  We'll move on to cross-node routines in later sections. 
+
+For now, we'll investigate what samples you have access to, select a family (inddex + parents) and perform variant querying on them.
+
+Add the following snippet to the __main__ section of the script:
+
+```python
+   # list all individuals
+   endpoint='individuals'
+   r = get_api_result(url,endpoint,token)
+   print(f"You have access to {len(r)} individuals:")
+   demo_sample = None
+   for i in r:
+      if i['LocalID'] == 'Demo_index':
+         demo_sample = i
+      print(f"{i['LocalID']} : {i['IndividualID']}")
 
 
 
-## Downloading and Installing ANNOVAR
+```
+It will list all individuals and then select "Demo_index" as an example. It is part of a public dataset all users have access to.
 
-1. **Download & Install ANNOVAR**: Download the appropriate Annovar version for your operating system from the official website [here](https://www.openbioinformatics.org/annovar/annovar_download_form.php). Follow the installation instructions provided.
-2. **Download & Install reference databases**: Annovar utilizes various reference databases for annotations. Download the relevant databases based on your research focus (e.g., gene models, functional annotations). Refer to the [Annovar documentation](https://annovar.openbioinformatics.org/en/latest/user-guide/startup/) for downloading and installing these databases in the designated directory.
-3. **Update Databases**: Download the necessary annotation databases to ensure ANNOVAR has the latest information for your analysis.
 
-### Download the Databases
 
-1. Visit the [Annovar download page](https://annovar.openbioinformatics.org/en/latest/user-guide/download/). This page lists available databases for download, including human reference databases.
-2. **Download refGene database**: This database provides information about protein-coding genes. Click on the "download" button next to the refGene database. This will typically download a compressed archive file (e.g., .gz).
-3. **Create the humandb Directory**: Navigate to the directory where you want to store your Annovar databases. Create a new folder named `humandb` using the appropriate command for your operating system (e.g., `mkdir humandb` in Linux/macOS).
-4. **Extract Downloaded Archives**: Move the downloaded archive files for each database into the `humandb` directory. Use an archive extraction tool like `gunzip` (Linux/macOS) or a dedicated archive manager to extract the contents of each file.
 
-### Configuring ANNOVAR
 
-1. **Set Input File**: Specify the VCF file you want to annotate using ANNOVAR.
-2. **Choose Databases**: Select the appropriate annotation databases to use for your analysis (e.g., dbNSFP version 42a).
-3. **Customize Parameters**: Adjust ANNOVAR settings to suit your specific research needs and preferences.
-
-### Annotating the VCF File with ANNOVAR
-
-1. **Run ANNOVAR**: Execute the ANNOVAR command to start the annotation process using the `table_annovar.pl` script provided with Annovar. Here's the basic command structure:
-   ```sh
-   perl .../annovar/table_annovar.pl VCFFILE .../annovar/humandb/ -out OUTPUT -vcfinput -buildver hg19 -protocol refGene,dbnsfp42a -operation gxf -xreffile XREFFILE
-   
-   
-## 3. Converting Genetic Annotations to Vector Representations
-
-This section details the data processing steps performed for the FedCrohn project. The process involves working with gene dictionaries, label processing, and feature extraction from annotated VCF files.
-
-#### 1. Gene Dictionary
+=============================================================================================================
 
 The file `genesdictRefGeneAnnovarComplete_withoutzerogenes.rtf` contains a dictionary of genes, which serves as a reference for identifying whether a gene being processed is present in the list or not. An example excerpt from the file is:
 
@@ -156,107 +156,7 @@ The file `genesdictRefGeneAnnovarComplete_withoutzerogenes.rtf` contains a dicti
 
 This dictionary is used to verify the presence of genes during the data processing steps.
 
-#### 2. Label Processing
 
-The labels for the samples are processed based on their identifiers. The code snippet for processing the labels is as follows:
-
-```plaintext
-if row['actual_sample'].startswith('CD'):
-    labels.loc[idx, 'actual_sample'] = 0
-else:
-    labels.loc[idx, 'actual_sample'] = 1
-```
-
-In this context:
-- Samples with identifiers starting with 'CD' are labeled as `0`.
-- All other samples are labeled as `1`.
-
-This labeling helps distinguish between different types of samples in the dataset.
-
-#### 3. Feature Extraction from Annotated VCF Files
-
-The core of the data processing involves iterating over each of the processed files, passing them to the `parseAnnovarIntoFeatures` method. This method reads Variant Call Format (VCF) files annotated by ANNOVAR and creates a matrix containing information on variants per gene. The matrix is returned as a NumPy ndarray.
-
-The steps involved are as follows:
-
-1. **Read Annotated VCF Files**: The VCF files, annotated by ANNOVAR, contain detailed information about genomic variants.
-2. **Create a Matrix of Variants**: The `parseAnnovarIntoFeatures` function parses these files and constructs a matrix where each entry corresponds to a variant in a specific gene.
-3. **Store Feature Vectors**: The resulting matrices (feature vectors) are stored in a list of genomes.
-4. **Save Feature Vectors**: These feature vectors are saved as `.npy` files, which serve as input for subsequent analysis and modeling.
-
-The `parseAnnovarIntoFeatures` method performs several key tasks:
-- **File Reading and Validation**: Opens the VCF file, reads it line by line, and validates the presence of required columns (e.g., "Chr", "Start").
-- **Region and Gene Filtering**: Filters out irrelevant regions and genes not present in the reference gene list.
-- **Variant Type Handling**: Handles various types of variants, including synonymous and nonsynonymous SNVs, and assigns them to the correct positions in the matrix.
-- **Frequency Thresholding**: Applies frequency thresholds to variants if a frequency dictionary is provided.
-- **Scoring**: Assigns functional scores to variants based on different predictors (e.g., provean, metasvm) if applicable.
-
-#### Summary of Data Processing Steps
-
-1. **Gene Dictionary Setup**: Use the provided gene dictionary to validate genes during processing.
-2. **Label Processing**: Assign numerical labels to samples based on their identifiers.
-3. **Feature Extraction**: Parse annotated VCF files to create matrices of gene variants, filtering and scoring variants as necessary.
-4. **Saving Features**: Save the processed feature vectors as `.npy` files for further analysis.
-
-By following these steps, we ensure that the data is processed consistently and is ready for use in the federated learning setup of FedCrohn. This involves leveraging a gene dictionary for validation, processing sample labels, and extracting meaningful features from annotated genomic data.
-
-
----
-
-## 4. Setting Up the Federated Learning Repository
-
-To run FedCrohn, a federated learning system designed for Crohn's disease prediction, it's recommended to use Miniconda for managing the Python environment and dependencies. Follow the steps below to set up the environment:
-
-### Prerequisites
-
-- **Miniconda**: Miniconda is a minimal installer for Conda, which is an open-source package management and environment management system. Miniconda allows you to create isolated environments for different projects.
-
-### Step-by-Step Setup Instructions
-
-1. **Download and Install Miniconda**
-   - Visit the [Miniconda installation page](https://docs.conda.io/en/latest/miniconda.html).
-   - Download the appropriate installer for your operating system (Windows, macOS, or Linux).
-   - Follow the installation instructions provided on the website.
-
-2. **Create a New Conda Environment**
-   - Open your terminal or command prompt.
-   - Create a new environment named `FedCrohn` with Python 3.7 by running:
-     ```sh
-     conda create -n FedCrohn python=3.7
-     ```
-
-3. **Activate the Environment**
-   - Activate the newly created environment with the command:
-     ```sh
-     conda activate FedCrohn
-     ```
-
-4. **Install PyTorch**
-   - Install PyTorch version 1.0 or higher. You can use the following command or refer to the [PyTorch website](https://pytorch.org) for more options:
-     ```sh
-     conda install pytorch -c pytorch
-     ```
-
-5. **Install SciPy and NumPy**
-   - Install SciPy and NumPy libraries with the command:
-     ```sh
-     conda install numpy scipy
-     ```
-
-6. **Install Flower (FL Library)**
-   - Flower is the Federated Learning library required for running FedCrohn. Refer to the [Flower documentation](https://flower.dev/docs/) for installation instructions.
-
-### Additional Notes
-
-- During the setup process, you may encounter dependency resolutions and patches that need to be applied. Ensure you follow any prompts or error messages to install the necessary versions of libraries and resolve conflicts.
-- Some of the libraries may need to be built from source rather than installed via pip. This may involve cloning the library's repository and following the build instructions provided.
-
-### Removing the Environment
-
-If you need to remove the `FedCrohn` environment at any time, you can do so by typing:
-```sh
-conda remove -n FedCrohn --all
-```
 
 ---
 
@@ -317,26 +217,6 @@ Feel free to experiment with different dataset combinations and observe the resu
 
 ---
 
-
-
-### Running Experiment 2 (Exp2 Standalone)
-
-Experiment 2 simulates the server-client interaction using a single script `standaloneFL.py`. This script combines all three datasets and simulates FL training with multiple clients.
-
-1. **Run the Script**
-   - Execute the following command to run the script:
-     ```sh
-     python standaloneFL.py 4
-     ```
-   - The script will automatically split the data, assign it to three centers, and simulate the FL process.
-
-### Experiment 2 Workflow
-
-- The script simulates the performance of FL methods for Crohn's disease prediction when several small datasets are combined into a single federated learning effort.
-
----
-
-By following these instructions, you will set up the necessary environment and run the experiments for FedCrohn. If you have any questions or need further assistance, please follow up as needed.
 
 ##DEMO VIDEO
 
