@@ -63,44 +63,90 @@ Install the prerequisites :
    conda activate wings
 ```
 
-## Test Connection
+## 3. Test Connection
 
 Save the following script as WiNGS_api.py
 
 ```python
 #!/usr/bin/env python
 
+@title IMPORTS
+iimport getpass
 import requests
-import json
-import sys
-import os
-import re
-import pandas as pd
-import os
-import re
-import xlsxwriter
-import getpass
+import time
+from tqdm import tqdm
 import pprint
+import pandas as pd
+import matplotlib.pyplot as plt
+import hashlib
+import json
+%matplotlib inline
 
-# basic api interaction function
-def get_api_result(url, endpoint, token, method='GET', **kwargs):
-   url = url.rstrip('/')
-   # add authentication token
-   headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
-   try:
-      response = requests.request(method, f"{url}/{endpoint}", headers=headers, json=arguments, params=arguments, verify=True)
-      response.raise_for_status()
-      return response.json()['message']
-   except requests.exceptions.RequestException as e:
-      print('Failed to get api response')
-      print(repr(e))
-      sys.exit(1)
+@title GENERAL CLASSES
+#############
+## CLASSES ##
+#############
+class APIError(ValueError):
+    def __init__(self, response, value: dict):
+        self.response = response
+        self.value : dict = value
+
+class WingsApi:
+    
+    SLEEP_SECONDS  = 5
+    RETRY = 60 # number of times to retry, wait SLEEP seconds after each failure
+
+    def __init__(self,url,token):
+        self.url = url.rstrip('/')
+        self.token = token
+        self._job_cache = {}
+        self.session = requests.session()   
+        self.session.headers.update({'Authorization': f'Bearer {self.token}'})
+        self.session.headers.update({'Content-Type': 'application/json'})
+
+    def hash_request(self,data):
+        # Convert dictionary to a JSON string with sorted keys to ensure consistent ordering
+        json_str = json.dumps(data, sort_keys=True)
+        # Create an MD5 hash object
+        md5_hash = hashlib.md5()
+        # hash the json
+        md5_hash.update(json_str.encode('utf-8'))
+        # Get the hexadecimal representation of the hash
+        return md5_hash.hexdigest()
+    
+    def get(self, endpoint, arguments={},skip_cache=False):
+        md5 = self.hash_request([endpoint, arguments])
+        if md5 in self._job_cache and not skip_cache:
+            return self._job_cache[md5]
+        else:
+          r = self.session.get(f"{self.url}/{endpoint}",params=arguments)
+          if r.status_code != 200:
+            raise APIError(r,r.json())
+          self._job_cache[md5] = r.json()['message']
+          return r.json()['message']
+       
+    def post(self,endpoint,arguments={},skip_cache=False):
+        md5 = self.hash_request([endpoint, arguments])
+        if md5 in self._job_cache and not skip_cache:
+            return self._job_cache[md5]
+        else:
+          r = self.session.post(f"{self.url}/{endpoint}",json=arguments)
+          if r.status_code != 200:
+            raise APIError(r,r.json())
+          self._job_cache[md5] = r.json()['message']
+          return r.json()['message']
+
+
+
 
 if __name__ == '__main__':
    # provide your token : 
    token = getpass.getpass('Enter your token : ')
-
+   # the url of the api :
    url="https://wings.esat.kuleuven.be/rest-api/"
+   # setup the api class
+   api = WingsApi(url,token)
+
    # get the principle investigator ID (piid) associated to your user
    endpoint='piid'
    r = get_api_result(url,endpoint,token)
@@ -111,7 +157,7 @@ if __name__ == '__main__':
 
 When executed, the above script will ask for your token and will print the api response to screen. Note the piid as you will need the value later on. 
 
-### Listing Samples
+## 4. Listing Samples
 
 Samples access is restricted by account.  This means that as a registered user, you can only see samples assigned to you. This type of work is not federated in a strict sense, as WiNGS automatically directs queries to the correct, individual data node.  We'll move on to cross-node routines in later sections. 
 
@@ -120,15 +166,15 @@ For now, we'll investigate what samples you have access to, select a family (ind
 Add the following snippet to the __main__ section of the script:
 
 ```python
-   # list all individuals
-   endpoint='individuals'
-   r = get_api_result(url,endpoint,token)
-   print(f"You have access to {len(r)} individuals:")
-   demo_sample = None
-   for i in r:
-      if i['LocalID'] == 'Demo_index':
-         demo_sample = i
-      print(f"{i['LocalID']} : {i['IndividualID']}")
+      # list all individuals
+      endpoint='individuals'
+      r = get_api_result(url,endpoint,token)
+      print(f"You have access to {len(r)} individuals:")
+      demo_sample = None
+      for i in r:
+         if i['LocalID'] == 'Demo_index':
+            demo_sample = i
+         print(f"{i['LocalID']} : {i['IndividualID']}")
 
 
 
@@ -136,84 +182,24 @@ Add the following snippet to the __main__ section of the script:
 It will list all individuals and then select "Demo_index" as an example. It is part of a public dataset all users have access to.
 
 
+### Information about the individual of interest
+
+The following code will fetch information about the family members linked to the sample and set phenotypes.
+
+```python
+   # family
+
+   # phenotypes
+
+```
+
+## 5. Querying Data : Sample Based analysis
 
 
 
 =============================================================================================================
 
-The file `genesdictRefGeneAnnovarComplete_withoutzerogenes.rtf` contains a dictionary of genes, which serves as a reference for identifying whether a gene being processed is present in the list or not. An example excerpt from the file is:
 
-```plaintext
-{
-  0: 'IQGAP1', 1: 'FFAR1', 2: 'ZNF829', 3: 'CNIH3', 4: 'NKD1',
-  5: 'TSTD2', 6: 'DHX33', 7: 'HRK', 8: 'LOC100505841', 9: 'SPANXA2',
-  10: 'GAGE12C', 11: 'TRAPPC2', 12: 'WASHC1', 13: 'APP', 14: 'CASP10',
-  15: 'HECW2', 16: 'PRDM15', 17: 'SNORD25', 18: 'ATP2A2', 19: 'ZNF385A',
-  20: 'PARP1', 21: 'PHF20L1', 22: 'CTIF', 23: 'ZNF561-AS1', 24: 'TMEM233',
-  25: 'ITPR2', 26: 'ITGB3BP', 27: 'PROZ', 28: 'MIR8072'
-}
-```
-
-This dictionary is used to verify the presence of genes during the data processing steps.
-
-
-
----
-
-## Repository Contents
-
-The repository contains the following files and directories essential for running the experiments:
-
-- `standaloneFL.py`: Script for running Experiment 2.
-- `flClient.py`: Federated Learning (FL) client script for Experiment 1.
-- `flServer.py`: FL server script for Experiment 1.
-- `NXTfusion`: Folder containing core source code necessary for running NXTppi.
-- `marshalledP3`, `phenopediaCrohnGenesmodels`: Folders containing data needed by the scripts.
-- `sources`: Additional functions required by the scripts.
-
----
-
-## Running Experiment 1 (Exp1 Fedrated)
-
-Experiment 1 involves running FedCrohn in a client-server setup with three datasets. Follow these steps:
-
-1. **Prepare the Datasets**
-   - The `marshalledP3` folder contains three CD cases control datasets (2, 3, and 4). These datasets are processed and binarized versions derived from the CAGI challenges.
-
-2. **Open Three Bash Shells**
-   - Open three terminal windows or bash shells.
-   - Activate the `FedCrohn` environment in all of them by typing:
-     ```sh
-     conda activate FedCrohn
-     ```
-
-3. **Launch the Server**
-   - In the first shell, start the FL server using dataset 4:
-     ```sh
-     python flServer.py 4
-     ```
-
-4. **Launch the Clients**
-   - In the second shell, start the first client using dataset 3:
-     ```sh
-     python flClient.py 3
-     ```
-   - In the third shell, start the second client using dataset 2:
-     ```sh
-     python flClient.py 2
-     ```
-     
-## 5. Initiating the Simulation
-
-### Experiment 1 Workflow (Fedrated)
-
-- The FL server (`flServer.py`) waits for the clients (`flClient.py`) to connect.
-- Once connected, the server initializes an empty neural network (NN) model and sends it to the clients.
-- The clients train the model on their respective datasets and send the updated models back to the server.
-- The server averages these models to create a consensus model.
-- This process constitutes one *round* of federated learning (FL) training. The script repeats this for five rounds and prints the final validation performance.
-
-Feel free to experiment with different dataset combinations and observe the results.
 
 ---
 
