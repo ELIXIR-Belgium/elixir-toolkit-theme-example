@@ -1,8 +1,8 @@
 subitems:
   - title: Home
     url: /index
-  - title: Example page
-    url: /example_page
+  - title: WiNGS
+    url: /WiNGS
   - title: FL  IBD
     url: /FL_IBD
 
