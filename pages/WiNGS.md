@@ -71,7 +71,7 @@ Save the following script as WiNGS_api.py
 #!/usr/bin/env python
 
 @title IMPORTS
-iimport getpass
+import getpass
 import requests
 import time
 from tqdm import tqdm
@@ -92,7 +92,7 @@ class APIError(ValueError):
         self.value : dict = value
 
 class WingsApi:
-    
+
     SLEEP_SECONDS  = 5
     RETRY = 60 # number of times to retry, wait SLEEP seconds after each failure
 
@@ -100,7 +100,7 @@ class WingsApi:
         self.url = url.rstrip('/')
         self.token = token
         self._job_cache = {}
-        self.session = requests.session()   
+        self.session = requests.session()
         self.session.headers.update({'Authorization': f'Bearer {self.token}'})
         self.session.headers.update({'Content-Type': 'application/json'})
 
@@ -113,7 +113,7 @@ class WingsApi:
         md5_hash.update(json_str.encode('utf-8'))
         # Get the hexadecimal representation of the hash
         return md5_hash.hexdigest()
-    
+
     def get(self, endpoint, arguments={},skip_cache=False):
         md5 = self.hash_request([endpoint, arguments])
         if md5 in self._job_cache and not skip_cache:
@@ -124,7 +124,7 @@ class WingsApi:
             raise APIError(r,r.json())
           self._job_cache[md5] = r.json()['message']
           return r.json()['message']
-       
+
     def post(self,endpoint,arguments={},skip_cache=False):
         md5 = self.hash_request([endpoint, arguments])
         if md5 in self._job_cache and not skip_cache:
@@ -136,6 +136,72 @@ class WingsApi:
           self._job_cache[md5] = r.json()['message']
           return r.json()['message']
 
+    def individual_details(self,individual):
+         # clinical data
+         endpoint=f"individuals/{individual['IndividualID']}"
+         r = self.get(endpoint)
+         individual['phenotype'] = r[0]['phenotype']
+         # trio's defined ?
+         endpoint='families'
+         r = self.get(endpoint,{'proband' : individual['IndividualID']})
+         if len(r):
+            individual['family'] = r
+            endpoint = 'trios'
+            r = self.get(endpoint,{'family' : individual['family']['FamilyID']})
+            r = [x for x in r if x['TrioStatus'] != 'disabled']
+            if len(r):
+              individual['trio'] = r
+            else:
+              individual['trio'] = None
+         else:
+            individual['family'] = None
+            individual['trio'] = None
+         # samples (data)
+         endpoint='samples'
+         r = self.get(endpoint,{'host_id' : 1, 'piid' : individual['PIID']})
+         r = [x for x in r if x['IndividualID'] == individual['IndividualID']]
+         if len(r):
+           individual['samples'] = r
+         else:
+           individual['samples'] = r
+         return individual
+
+    def get_results(self,endpoint,arguments):
+        results = list()
+        # first call : with cache
+        r = self.get(endpoint,arguments)
+        if r.get('status') == 'ready':
+          results.extend(r['results'])
+          # pages ?
+          page = 1
+          while r.get('meta').get('last_page') == 'false':
+            page += 1
+            #print(f"Fetching page {page}...")
+            arguments['page'] = page
+            r = self.get(endpoint,arguments)
+            results.extend(r['results'])
+          return results
+
+        # not ready / cached: poll status
+        for _ in tqdm(range(self.RETRY)):
+          r = api.get(endpoint,arguments,skip_cache=True)
+          status = r.get("status")
+          if status == "inprogress":
+              time.sleep(self.SLEEP_SECONDS)
+              continue
+          elif status == "ready":
+              page = 1
+              results.extend(r['results'])
+              while r.get('meta').get('last_page') == 'false':
+                page += 1
+                print(f"Fetching page {page}...")
+                arguments['page'] = page
+                r = self.get(endpoint,arguments)
+                results.extend(r['results'])
+          raise ValueError(r)
+
+        print(f"\nJOB: {request_id} still in progress. Stop polling... ")
+        return None
 
 
 
@@ -166,18 +232,32 @@ For now, we'll investigate what samples you have access to, select a family (ind
 Add the following snippet to the __main__ section of the script:
 
 ```python
-      # list all individuals
-      endpoint='individuals'
-      r = get_api_result(url,endpoint,token)
-      print(f"You have access to {len(r)} individuals:")
-      demo_sample = None
-      for i in r:
-         if i['LocalID'] == 'Demo_index':
-            demo_sample = i
-         print(f"{i['LocalID']} : {i['IndividualID']}")
-
-
-
+   # list all individuals
+   endpoint='individuals'
+   r = api.get(endpoint)
+   print(f"You have access to {len(r)} individuals:")
+   individual = None
+   
+   # input for matching the individual you want :
+   #s_string = input('Provide the LocalID of the individual to select: ')
+   s_string = "Demo_index"
+   
+   for idx, i in enumerate(r):
+      if i['LocalID'] == s_string:
+         individual = i
+      if idx < 5:
+          print(f"{i['LocalID']} : {i['IndividualID']}")
+      if idx == 5:
+          print('....')
+   
+   if not individual:
+     raise Exception('No Individual found')
+   
+    
+   print("\nDetails on the selected individual : ")
+   pprint.pprint(individual)
+   
+   
 ```
 It will list all individuals and then select "Demo_index" as an example. It is part of a public dataset all users have access to.
 
@@ -187,9 +267,16 @@ It will list all individuals and then select "Demo_index" as an example. It is p
 The following code will fetch information about the family members linked to the sample and set phenotypes.
 
 ```python
-   # family
+   # get more details, see class for details on endpoints used
+   individual = api.individual_details(individual)
 
-   # phenotypes
+   print("\nDetails on the selected individual : ")
+   pprint.pprint(individual)
+   
+   # get variables for use in querying :
+   used_trio = individual['trio'][0]
+   used_sample = [x for x in individual['samples'] if x['SampleFileID'] == used_trio['ProbandFileID']][0]
+
 
 ```
 
