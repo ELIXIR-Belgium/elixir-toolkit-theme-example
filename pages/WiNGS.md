@@ -193,9 +193,27 @@ The following code will fetch information about the family members linked to the
 
 ```
 
-## 5. Querying Data : Sample Based analysis
+## 5. Querying Data : Sample Based Analysis
+
+### General querying
 
 
+### Family based querying
+
+
+### Create resulting XLX file
+
+
+
+## 6. Querying DAta : Variant/Gene Based Analysis
+
+### Variant Based
+
+
+### Gene Based
+
+
+### 7. Querying Data : Structureal Variant 
 
 =============================================================================================================
 
