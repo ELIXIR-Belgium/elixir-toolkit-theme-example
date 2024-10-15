@@ -15,6 +15,9 @@ This tutorial will guide you through the process of querying federated genomics 
 4. Querying data 
 5. Manipulating data
 
+
+[google colab page for this demo](https://colab.research.google.com/drive/14L1sqSp85ENSyCl_Jcaw8HkHo78Nw2yF?usp=sharing)
+
 ## 1. Understanding Genetic Data, VCF Files and the federated setup of WiNGS
 
 ### VCF files
