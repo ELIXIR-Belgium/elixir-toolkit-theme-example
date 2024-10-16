@@ -35,14 +35,14 @@ For these reasons, WiNGS was implemented to become a portal to aggregated genomi
 
 
 Data is structured in WiNGS as follows:
-- ** Individual **: these are cinical cases, patients.
-- ** Sample **: these are the experimental samples associated to individuals. (eg : WGS experiment, or SV experiment)
-- ** Dataset **: These are the analysis files related to a sample. eg : GATK based SNV analysis on hg38 for WGS data. 
+- **Individual**: these are cinical cases, patients.
+- **Sample**: these are the experimental samples associated to individuals. (eg : WGS experiment, or SV experiment)
+- **Dataset**: These are the analysis files related to a sample. eg : GATK based SNV analysis on hg38 for WGS data. 
 
 WiNGS is accessible as REST api, which is documented through [swagger](https://wings.esat.kuleuven.be/rest-api/api-docs/).  To perform an analysis, the following prerequisites are needed, which are performed through a web-based UI: 
 
-- ** A user account ** : to shield data, anonymous access is not allowed, register [here](https://wings.esat.kuleuven.be/Account/Register)
-- ** An API key ** : [Log in](https://wings-platform.org) and select user meny : Create API key , on the top right
+- **A user account** : to shield data, anonymous access is not allowed, register [here](https://wings.esat.kuleuven.be/Account/Register)
+- **An API key** : [Log in](https://wings-platform.org) and select user meny : Create API key , on the top right
 
 
 
@@ -75,7 +75,6 @@ Save the following script as WiNGS_api.py
 ```python
 #!/usr/bin/env python
 
-@title IMPORTS
 import getpass
 import requests
 import time
@@ -87,7 +86,6 @@ import hashlib
 import json
 %matplotlib inline
 
-@title GENERAL CLASSES
 #############
 ## CLASSES ##
 #############
@@ -567,12 +565,12 @@ wes_variants = api.get_variant_results("/variant/discovery/query/results",{'requ
 
 We also provided the phenotype of our demo individual. This allows us to group data based on the presence of these hpo terms.  The results are : 
 
-WGS
-| var+phen  | var-phen  | -var+phen  | -var-phen | 
-|------------|-----------|------------|----------|
-|       0   |       2   |        7   |      460  |
+| WGS
+| var+phen   | var-phen  | -var+phen  | -var-phen | 
+|------------|-----------|------------|-----------|
+|       0    |       2   |        7   |      460  |
  
-WES
+| WES
 |  var+phen | var-phen | -var+phen | -var-phen|
 |-----------|----------|-----------|----------|
 |        0  |       0  |        7  |      462 |
@@ -623,12 +621,13 @@ wes_variants = api.get_variant_results("/variant/discovery/query/results",{'requ
 
 ```
 The results are now: 
-WGS
-| var+phen | var-phen | -var+phen | -var-phen|
-|---------|----------|-----------|----------|
-|       2  |       5  |       10  |      786 |
 
-WES
+|WGS
+| var+phen | var-phen | -var+phen | -var-phen|
+|----------|----------|-----------|----------|
+| 2        |       5  |       10  |      786 |
+
+|WES
 | var+phen | var-phen | -var+phen | -var-phen|
 |----------|----------|-----------|----------|
 |       1  |       0  |       11  |      791 |
@@ -650,11 +649,11 @@ result = api.post(endpoint,arguments)
 pprint.pprint(result)
 ```
 
-### 7. Querying Data : Structureal Variant 
+### 7. Querying Data : Structural variation
  
 A second data type, next to SNV variants, are structural variants.  These can be queried using the following endpoints:
 
-This part of the demo is not yet complete.
+**TODO**: This part of the demo is not yet complete.
 
 =============================================================================================================
 
